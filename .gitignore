@@ -34,3 +34,5 @@
 # vim temp files
 *.swp
 
+# build files
+demo
