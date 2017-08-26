@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
 	/* Create window & renderer */
 	SDL_Window *sdlWindow;
 	SDL_Renderer *sdlRenderer;
-	int ret = SDL_CreateWindowAndRenderer(0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP, &sdlWindow, &sdlRenderer);
+	int ret = SDL_CreateWindowAndRenderer(640, 480, SDL_WINDOW_RESIZABLE, &sdlWindow, &sdlRenderer);
 
 	if (ret) {
 		cerr << "SDL_CreateWindowAnRendere error: " << SDL_GetError() << endl;
@@ -46,8 +46,8 @@ int main(int argc, char *argv[])
 	SDL_RenderPresent(sdlRenderer);
 
 	/* ... and scale the window to 640 x 480 */
-	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");  // make the scaled rendering look smoother.
-	SDL_RenderSetLogicalSize(sdlRenderer, 640, 480);
+//	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");  // make the scaled rendering look smoother.
+//	SDL_RenderSetLogicalSize(sdlRenderer, 640, 480);
 
     //Load image
     SDL_Surface *hello = SDL_LoadBMP("res/img/purple.bmp");
@@ -63,8 +63,21 @@ int main(int argc, char *argv[])
 		myerror("SDL_CreateTextureFromSurface error: ", sdlWindow, sdlRenderer);
 		return -1;
 	}
-	
-	ret = SDL_RenderCopy(sdlRenderer, texture, NULL, NULL);
+
+	SDL_Rect rect;
+	rect.x = 0;
+	rect.y = 0;
+
+	int w, h;
+	SDL_QueryTexture(texture, NULL, NULL, &w, &h);
+
+	cout << "w = " << w << endl;
+	cout << "h = " << h << endl;
+
+	rect.w = w;
+	rect.h = h;
+
+	ret = SDL_RenderCopy(sdlRenderer, texture, NULL, &rect);
 	if (ret) {
 		SDL_DestroyTexture(texture);
 		myerror("SDL_RenderCopy error: ", sdlWindow, sdlRenderer);
@@ -77,9 +90,6 @@ int main(int argc, char *argv[])
 
     /* Exit */
 	myerror("Success !", sdlWindow, sdlRenderer);
-
-	cout << "Input anything to quit" << endl;
-	cin >> ret;
 
     return 0;
 }
