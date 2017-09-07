@@ -2,10 +2,10 @@ CC=g++
 LD=g++
 BIN=demo
 
-CPPFLAGS := -Wall -Wextra -std=c++11
+CPPFLAGS := -Wall -Wextra -std=c++11 `sdl2-config --cflags`
 CPPFLAGS += -g
 
-LDFLAGS := -lSDL2
+LDFLAGS := `sdl2-config --libs`
 
 SRCFILES := main.cpp
 SOURCES := $(addprefix src/, $(SRCFILES))
@@ -17,7 +17,7 @@ all: $(BIN)
 
 $(BIN): build $(OBJS)
 	@echo "LD   $(BIN)"
-	@$(LD) $(LDFLAGS) $(OBJS) -o $(BIN)
+	$(LD) $(OBJS) $(LDFLAGS) -o $(BIN)
 
 build:
 	@echo "DIR  build"
