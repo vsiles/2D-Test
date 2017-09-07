@@ -5,9 +5,9 @@ BIN=demo
 CPPFLAGS := -Wall -Wextra -std=c++11 `sdl2-config --cflags`
 CPPFLAGS += -g
 
-LDFLAGS := `sdl2-config --libs`
+LDFLAGS := `sdl2-config --libs` -lz
 
-SRCFILES := main.cpp
+SRCFILES := main.cpp base64.cpp
 SOURCES := $(addprefix src/, $(SRCFILES))
 
 OBJFILES := $(patsubst %.cpp,%.o, $(SRCFILES))

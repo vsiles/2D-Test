@@ -1,5 +1,11 @@
 #include <iostream>
+#include <fstream>
+#include <cstdint>
 #include <SDL2/SDL.h>
+#include <zlib.h>
+
+#include "json.hpp"
+using json = nlohmann::json;
 
 using namespace std;
 
@@ -25,11 +31,124 @@ typedef struct {
     vector_t pos, size;
 } cell_t;
 
+extern int b64decode(const string &data, unsigned char **bytes, size_t *length);
+
 int main(int argc, char *argv[])
 {
+    int ret;
+
     (void)argc;
     (void)argv;
 
+    /* Load level information */
+    ifstream level_info("./resources/maps/map0.json");
+    if (!level_info.good()) {
+        cerr << "Can't open file './resources/maps/map0.json' for reading" << endl;
+        return -1;
+    }
+
+    json j;
+    level_info >> j;
+
+    json layer0 = j["layers"][0];
+    const size_t width = j["width"];
+    const size_t height = j["height"];
+
+    if (width != layer0["width"] || height != layer0["height"]) {
+        cerr << "Tile layer dimensions doesn't match map dimensions" << endl;
+        return -1;
+    }
+
+
+    size_t length;
+    unsigned char *bytes = NULL;
+
+    if (layer0["encoding"] == "base64") {
+        cout << "base64 encoding spotted, decoding ..." << endl;
+        const string data = layer0["data"];
+        ret = b64decode(data, &bytes, &length);
+        if (ret) {
+            cerr << "Can't decode layer0's data" << endl;
+            return -1;
+        }
+        cout << "Decoded data. Old size was " << data.length();
+        cout << " new size is " << length << endl;
+    } else {
+        cerr << "Unsupported map format: " << layer0["encoding"] << endl;
+        return -1;
+    }
+
+    // spec says that 'data' is a stream of bytes that must be parsed
+    // as uint32_t LE, so read 4 at a time
+    size_t data_length = 4 * width * height;
+    unsigned char *data_bytes = new unsigned char[data_length];
+    if (data_bytes == NULL) {
+        cerr << "Can't allocate buffer for decompression" << endl;
+        delete [] bytes;
+        return -1;
+    }
+
+    if (layer0["compression"] == "zlib") {
+        ret = uncompress(data_bytes, &data_length, bytes, length);
+        switch (ret) {
+            case Z_OK:
+                cout << "Decompressing successful" << endl;
+                ret = 0;
+                break;
+            case Z_MEM_ERROR:
+                cerr << "Decompressing ran out of memory" << endl;
+                ret = 1;
+                break;
+            case Z_BUF_ERROR:
+                cerr << "Decompressing buffer not large enough" << endl;
+                ret = 1;
+                break;
+            case Z_DATA_ERROR:
+                cerr << "Decompressing: input data corruption" << endl;
+                ret = 1;
+                break;
+            default:
+                cerr << "Decompressing: unknown error " << ret << endl;
+                ret = 1;
+                break;
+        }
+        delete [] bytes;
+
+        if (ret) {
+            delete [] data_bytes;
+            return -1;
+        }
+    }
+
+    // tileset info
+    json tileset0 = j["tilesets"][0];
+    const uint32_t first_gid = tileset0["firstgid"];
+
+    const size_t nr_tiles = width * height;
+    uint32_t *tiles_id = new uint32_t[nr_tiles];
+    if (tiles_id == NULL) {
+        cerr << "Can't allocate buffer for tiles id" << endl;
+        delete [] data_bytes;
+        return -1;
+    }
+
+    for (size_t i = 0; i < nr_tiles; ++i) {
+        uint32_t val = 0;
+        val |= ((uint32_t)data_bytes[(4 * i) + 0]) << 0;
+        val |= ((uint32_t)data_bytes[(4 * i) + 1]) << 8;
+        val |= ((uint32_t)data_bytes[(4 * i) + 2]) << 16;
+        val |= ((uint32_t)data_bytes[(4 * i) + 3]) << 24;
+        tiles_id[i] = val;
+        if (val != 0) {
+            // TODO: build a "GID -> tileset x tileid" function
+            cout << "info: cell " << i << " = " << val - first_gid << endl;
+        }
+    }
+    delete [] data_bytes;
+
+    cout << "Exiting..." << endl;
+    delete [] tiles_id;
+    return 0;
 #if 0
     SDL_INIT_TIMER          timer subsystem
         SDL_INIT_AUDIO          audio subsystem
@@ -40,7 +159,7 @@ int main(int argc, char *argv[])
         SDL_INIT_EVENTS         events subsystem
         SDL_INIT_EVERYTHING             all of the above subsystems
 #endif
-        SDL_Init(SDL_INIT_EVERYTHING);
+    SDL_Init(SDL_INIT_EVERYTHING);
 
     /* Create window & renderer */
     SDL_Window *sdlWindow;
@@ -50,8 +169,8 @@ int main(int argc, char *argv[])
     SDL_WINDOW_FULLSCREEN_DESKTOP
         SDL_WINDOW_FULLSCREEN
 #endif
-        int ret = SDL_CreateWindowAndRenderer(SCREEN_WIDTH, SCREEN_HEIGHT,
-                                              SDL_WINDOW_RESIZABLE, &sdlWindow, &sdlRenderer);
+    ret = SDL_CreateWindowAndRenderer(SCREEN_WIDTH, SCREEN_HEIGHT,
+                                      SDL_WINDOW_RESIZABLE, &sdlWindow, &sdlRenderer);
 
     if (ret) {
         cerr << "SDL_CreateWindowAnRendere error: " << SDL_GetError() << endl;
