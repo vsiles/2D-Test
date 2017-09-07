@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
     SDL_RenderSetLogicalSize(sdlRenderer, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     //Load image
-    SDL_Surface *hello = SDL_LoadBMP("res/img/purple.bmp");
+    SDL_Surface *hello = SDL_LoadBMP("resources/img/purple.bmp");
     if (hello == NULL) {
         myerror("SDL_LoadBMP error: ", sdlWindow, sdlRenderer);
         return -1;
