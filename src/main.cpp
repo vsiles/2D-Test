@@ -2,6 +2,7 @@
 #include <fstream>
 #include <cstdint>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 #include <zlib.h>
 
 #include "json.hpp"
@@ -146,9 +147,6 @@ int main(int argc, char *argv[])
     }
     delete [] data_bytes;
 
-    cout << "Exiting..." << endl;
-    delete [] tiles_id;
-    return 0;
 #if 0
     SDL_INIT_TIMER          timer subsystem
         SDL_INIT_AUDIO          audio subsystem
@@ -174,9 +172,20 @@ int main(int argc, char *argv[])
 
     if (ret) {
         cerr << "SDL_CreateWindowAnRendere error: " << SDL_GetError() << endl;
-        SDL_Quit();
+        delete [] tiles_id;
         return -1;
     }
+
+    // Initialize PNG loading
+    int imgFlags = IMG_INIT_PNG;
+    ret = IMG_Init(imgFlags);
+    if ((ret & imgFlags) == 0) {
+        cerr << "Can't initialize PNG support: " << IMG_GetError() << endl;
+        SDL_Quit();
+        delete [] tiles_id;
+        return -1;
+    }
+
 
     /* Configure renderer ... */
     SDL_SetRenderDrawColor(sdlRenderer, 0, 0, 0, 255);
@@ -187,9 +196,12 @@ int main(int argc, char *argv[])
     SDL_RenderSetLogicalSize(sdlRenderer, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     //Load image
-    SDL_Surface *hello = SDL_LoadBMP("resources/img/purple.bmp");
+    SDL_Surface *hello = IMG_Load("resources/img/purple.png");
     if (hello == NULL) {
-        myerror("SDL_LoadBMP error: ", sdlWindow, sdlRenderer);
+        myerror("IMG_Load error: ", sdlWindow, sdlRenderer);
+        IMG_Quit();
+        SDL_Quit();
+        delete [] tiles_id;
         return -1;
     }
 
@@ -198,8 +210,13 @@ int main(int argc, char *argv[])
 
     if (texture == NULL) {
         myerror("SDL_CreateTextureFromSurface error: ", sdlWindow, sdlRenderer);
+        IMG_Quit();
+        SDL_Quit();
+        delete [] tiles_id;
         return -1;
     }
+
+    // TODO: Optimize surface ?
 
     SDL_Rect rect;
     rect.x = 0;
@@ -215,6 +232,9 @@ int main(int argc, char *argv[])
     if (ret) {
         SDL_DestroyTexture(texture);
         myerror("SDL_RenderCopy error: ", sdlWindow, sdlRenderer);
+        IMG_Quit();
+        SDL_Quit();
+        delete [] tiles_id;
         return -1;
     }
 
@@ -228,6 +248,9 @@ int main(int argc, char *argv[])
 
     if (level == NULL) {
         myerror("new cell_t[] failure", sdlWindow, sdlRenderer);
+        IMG_Quit();
+        SDL_Quit();
+        delete [] tiles_id;
         return -1;
     }
 
@@ -268,5 +291,8 @@ int main(int argc, char *argv[])
     delete[] level;
     myerror("Success !", sdlWindow, sdlRenderer);
 
+    IMG_Quit();
+    SDL_Quit();
+    delete [] tiles_id;
     return 0;
 }

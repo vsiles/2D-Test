@@ -5,7 +5,7 @@ BIN=demo
 CPPFLAGS := -Wall -Wextra -std=c++11 `sdl2-config --cflags`
 CPPFLAGS += -g
 
-LDFLAGS := `sdl2-config --libs` -lz
+LDFLAGS := `sdl2-config --libs` -lz -lSDL2_image
 
 SRCFILES := main.cpp base64.cpp
 SOURCES := $(addprefix src/, $(SRCFILES))
