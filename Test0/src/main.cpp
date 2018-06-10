@@ -1,11 +1,14 @@
 #include <iostream>
 #include <fstream>
 #include <cstdint>
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
+#include <string>
+#include <SDL.h>
+#include <SDL_image.h>
 #include <zlib.h>
 
 #include "json.hpp"
+#include "resource.hpp"
+
 using json = nlohmann::json;
 
 using namespace std;
@@ -41,13 +44,17 @@ int main(int argc, char *argv[])
     (void)argc;
     (void)argv;
 
+    string maps_path = getResourcePath("maps");
+
     /* Load level information */
-    ifstream level_info("./resources/maps/map0.json");
+    ifstream level_info(maps_path + "map0.json");
     if (!level_info.good()) {
-        cerr << "Can't open file './resources/maps/map0.json' for reading" << endl;
+        cerr << "Can't open file '" << maps_path;
+        cerr << "map0.json' for reading" << endl;
         return -1;
     }
 
+    cout << "'" << maps_path << "map0.json' spotted." << endl;
     json j;
     level_info >> j;
 
@@ -59,7 +66,7 @@ int main(int argc, char *argv[])
         cerr << "Tile layer dimensions doesn't match map dimensions" << endl;
         return -1;
     }
-
+    cout << "Tile layer dimensions: ok" << endl;
 
     size_t length;
     unsigned char *bytes = NULL;
@@ -90,7 +97,8 @@ int main(int argc, char *argv[])
     }
 
     if (layer0["compression"] == "zlib") {
-        ret = uncompress(data_bytes, &data_length, bytes, length);
+        ret = uncompress(data_bytes, (unsigned long *)&data_length, bytes,
+                         length);
         switch (ret) {
             case Z_OK:
                 cout << "Decompressing successful" << endl;
@@ -295,4 +303,26 @@ int main(int argc, char *argv[])
     SDL_Quit();
     delete [] tiles_id;
     return 0;
+}
+
+string getResourcePath(const string &subDir = "")
+{
+    static std::string baseRes;
+    if (baseRes.empty()) {
+        char *basePath = SDL_GetBasePath();
+        if (basePath){
+            baseRes = basePath;
+            SDL_free(basePath);
+        }
+        else {
+            cerr << "Error getting resource path: " << SDL_GetError() << endl;
+            return "";
+        }
+        //We replace the last bin/ with res/ to get the the resource path
+        size_t pos = baseRes.rfind("bin");
+        baseRes = baseRes.substr(0, pos) + "resources/";
+    }
+    //If we want a specific subdirectory path in the resource directory
+    //append it to the base path. This would be something like Lessons/res/Lesson0
+    return (subDir.empty()) ? (baseRes) : (baseRes + subDir + "/");
 }

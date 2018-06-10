@@ -1,48 +1,13 @@
 # Prerequisites
 *.d
 
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
+# Build artefact
+build
+bin
 
 # vim temp files
 *.swp
 
-# build files
-demo
-/.vs/Plat2D-demo/v14
-/Debug
-/x64
-/.gitattributes
-/Plat2D-demo.vcxproj.user
-/Plat2D-demo.vcxproj.filters
-/Plat2D-demo.vcxproj
-/Plat2D-demo.VC.VC.opendb
-/Plat2D-demo.VC.db
-/Plat2D-demo.sln
+# VScode configuration
+.vscode
+
