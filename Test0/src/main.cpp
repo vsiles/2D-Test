@@ -44,17 +44,16 @@ int main(int argc, char *argv[])
     (void)argc;
     (void)argv;
 
-    string maps_path = getResourcePath("maps");
+    string maps_path = getResourcePath("maps") + "map0.json";
 
     /* Load level information */
-    ifstream level_info(maps_path + "map0.json");
+    ifstream level_info(maps_path);
     if (!level_info.good()) {
-        cerr << "Can't open file '" << maps_path;
-        cerr << "map0.json' for reading" << endl;
+        cerr << "Can't open file '" << maps_path << "' for reading." << endl;
         return -1;
     }
 
-    cout << "'" << maps_path << "map0.json' spotted." << endl;
+    cout << "'" << maps_path << "' spotted." << endl;
     json j;
     level_info >> j;
 
@@ -204,7 +203,8 @@ int main(int argc, char *argv[])
     SDL_RenderSetLogicalSize(sdlRenderer, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     //Load image
-    SDL_Surface *hello = IMG_Load("resources/img/purple.png");
+    string imgs_path = getResourcePath("img") + "purple.png";
+    SDL_Surface *hello = IMG_Load(imgs_path.c_str());
     if (hello == NULL) {
         myerror("IMG_Load error: ", sdlWindow, sdlRenderer);
         IMG_Quit();
