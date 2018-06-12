@@ -33,11 +33,8 @@ find_package(SDL2_image REQUIRED)
 include_directories(${SDL2_IMAGE_INCLUDE_DIR})
 
 # Look up ZLIB
-#if (WIN32)
-#set (CMAKE_INCLUDE_PATH  "D:/Data/Code/zlib")
-#endif (WIN32)
 find_package(ZLIB REQUIRED)
 
 # First test program
-#add_subdirectory(Test0) # Tested OK onlinux
+add_subdirectory(Test0)
 add_subdirectory(Test1)

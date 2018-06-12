@@ -17,8 +17,8 @@ static void myerror(char const *msg, SDL_Window *sdlWindow,
                     SDL_Renderer *sdlRenderer)
 {
     cerr << msg << SDL_GetError() << endl;
-    SDL_DestroyWindow(sdlWindow);
     SDL_DestroyRenderer(sdlRenderer);
+    SDL_DestroyWindow(sdlWindow);
     SDL_Quit();
 }
 
@@ -297,10 +297,13 @@ int main(int argc, char *argv[])
 
     /* Exit */
     delete[] level;
-    myerror("Success !", sdlWindow, sdlRenderer);
+    cout << "Success !" << endl;
 
+    SDL_DestroyRenderer(sdlRenderer);
+    SDL_DestroyWindow(sdlWindow);
     IMG_Quit();
     SDL_Quit();
+
     delete [] tiles_id;
     return 0;
 }
