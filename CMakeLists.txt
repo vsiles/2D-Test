@@ -27,6 +27,7 @@ endif()
 # Look up SDL2 and add the include directory to our include path
 find_package(SDL2 REQUIRED)
 include_directories(${SDL2_INCLUDE_DIR})
+include_directories(include)
 
 # Look up SDL2_Image
 find_package(SDL2_image REQUIRED)
