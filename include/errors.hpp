@@ -17,4 +17,11 @@ static inline void log(const std::string &msg, std::ostream &os = std::cout)
     os << "[    ] " << msg << std::endl;
 }
 
+/* Log a raw error */
+static inline void logError(const std::string &msg,
+                            std::ostream &os = std::cerr)
+{
+    os << "[XXXX] " << msg << std::endl;
+}
+
 #endif /* ERRORS_H_INCLUDED */
