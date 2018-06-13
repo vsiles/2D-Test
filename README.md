@@ -4,15 +4,16 @@ Casual 2D engine for platformer 'Megaman'-like
 ** early stages **
 
 Not much at the moment, only a very small [Tiled](https://www.mapeditor.org)
-parser, to toy with the format (see Test1)
+parser, to toy with the format (see Test0)
 
 Depends on:
-- C++
-- SDL 2.0
-- SDL\_image 2.0
-- Zlib
+- [SDL 2.0](https://www.libsdl.org/)
+- [SDL\_image 2.0](https://www.libsdl.org/projects/SDL_image/)
+- [zlib](https://www.zlib.net/)
 - [nlohmann](https://github.com/nlohmann/json) JSON parser.
+- C++
 - (maybe lua for scripting in the future)
+- [CMake](https://cmake.org/)
 
 # Building information
 ```shell
