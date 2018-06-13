@@ -27,7 +27,6 @@ endif()
 # Look up SDL2 and add the include directory to our include path
 find_package(SDL2 REQUIRED)
 include_directories(${SDL2_INCLUDE_DIR})
-include_directories(include)
 
 # Look up SDL2_Image
 find_package(SDL2_image REQUIRED)
@@ -35,7 +34,12 @@ include_directories(${SDL2_IMAGE_INCLUDE_DIR})
 
 # Look up ZLIB
 find_package(ZLIB REQUIRED)
+# ZLIB includes are in the default compiler path
+
+# Local includes
+include_directories(include)
 
 # First test program
 add_subdirectory(Test0)
 add_subdirectory(Test1)
+add_subdirectory(Test2)
