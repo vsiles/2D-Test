@@ -32,6 +32,10 @@ include_directories(${SDL2_INCLUDE_DIR})
 find_package(SDL2_image REQUIRED)
 include_directories(${SDL2_IMAGE_INCLUDE_DIR})
 
+# Look up SDL2_ttf
+find_package(SDL2_ttf REQUIRED)
+include_directories(${SDL2_TTF_INCLUDE_DIR})
+
 # Look up ZLIB
 find_package(ZLIB REQUIRED)
 # ZLIB includes are in the default compiler path
@@ -44,3 +48,4 @@ add_subdirectory(Test0)
 add_subdirectory(Test1)
 add_subdirectory(Test2)
 add_subdirectory(Test3)
+add_subdirectory(Test4)

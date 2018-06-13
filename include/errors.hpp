@@ -4,6 +4,7 @@
 #include <iostream>
 #include <SDL.h>
 #include <SDL_image.h>
+#include <SDL_ttf.h>
 
 /* Log a SDL error */
 static inline void logSDLError(const std::string &msg,
@@ -17,6 +18,13 @@ static inline void logIMGError(const std::string &msg,
                                std::ostream &os = std::cerr)
 {
     os << "[IMG ] " << msg << " error: " << IMG_GetError() << std::endl;
+}
+
+/* Log a SDL_ttf error */
+static inline void logTTFError(const std::string &msg,
+                               std::ostream &os = std::cerr)
+{
+    os << "[TTF ] " << msg << " error: " << TTF_GetError() << std::endl;
 }
 
 /* Log a normal message */
