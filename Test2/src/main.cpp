@@ -110,8 +110,28 @@ static int run(gstate_t *gstate)
     int nr_tiles_x = gstate->width / TILE_SIZE;
     int nr_tiles_y = gstate->height / TILE_SIZE;
 
-    /* Display BMP for 3 secs */
-    for (int sec = 0; sec < 3; sec++) {
+    SDL_Event event;
+
+    while (true) {
+        /* Event management */
+        bool done = false;
+        while (SDL_PollEvent(&event) != 0) {
+            switch (event.type) {
+                case SDL_QUIT:
+                case SDL_KEYDOWN:
+                case SDL_MOUSEBUTTONDOWN:
+                    done = true;
+                    break;
+                default:
+                    cout << "Event: " << event.type << endl;
+            }
+            if (done)
+                break;
+        }
+        if (done)
+            break;
+
+        /* Render stuff */
         SDL_RenderClear(gstate->ren);
 
         /* Main drawing code */
@@ -131,7 +151,6 @@ static int run(gstate_t *gstate)
         /* End of main drawing code */
 
         SDL_RenderPresent(gstate->ren);
-        SDL_Delay(1000);
     }
 
     SDL_DestroyTexture(image);
