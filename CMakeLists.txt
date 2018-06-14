@@ -41,8 +41,9 @@ find_package(ZLIB REQUIRED)
 # ZLIB includes are in the default compiler path
 
 # Local includes
-include_directories(include)
-
+include_directories(${Plat2D_SOURCE_DIR}/include)
+add_subdirectory (lib) 
+ 
 # First test program
 add_subdirectory(Test0)
 add_subdirectory(Test1)
