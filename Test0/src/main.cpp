@@ -308,7 +308,7 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-string getResourcePath(const string &subDir = "")
+string getResourcePath(const string &subDir)
 {
     static std::string baseRes;
     if (baseRes.empty()) {

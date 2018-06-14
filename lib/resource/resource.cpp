@@ -6,7 +6,7 @@
 
 using namespace std;
 
-string getResourcePath(const string &subDir = "")
+string getResourcePath(const string &subDir)
 {
     static std::string baseRes;
     if (baseRes.empty()) {

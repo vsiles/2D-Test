@@ -4,6 +4,6 @@
 #include <string>
 
 /* Return the path to the 'resource' directory */
-std::string getResourcePath(const std::string &subDir);
+std::string getResourcePath(const std::string &subDir = "");
 
 #endif /* RESOURCE_H_INCLUDED */

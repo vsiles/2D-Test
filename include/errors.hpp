@@ -34,10 +34,12 @@ static inline void log(const std::string &msg, std::ostream &os = std::cout)
 }
 
 /* Log a raw error */
-static inline void logError(const std::string &msg,
+static inline void logError(const char *code, const std::string &msg,
                             std::ostream &os = std::cerr)
 {
-    os << "[XXXX] " << msg << std::endl;
+    os << "[";
+    os.write(code, 4);
+    os << "] " << msg << std::endl;
 }
 
 #endif /* ERRORS_H_INCLUDED */

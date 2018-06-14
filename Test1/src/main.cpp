@@ -53,7 +53,7 @@ static SDL_Texture *createTexture(gstate_t *gstate, const char *path,
             surf = SDL_LoadBMP(path);
             break;
         default:
-            logError("Unsupported texture format");
+            logError("XXX", "Unsupported texture format");
             return nullptr;
     }
 
