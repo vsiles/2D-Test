@@ -8,8 +8,11 @@ using namespace std;
 #include "resource.hpp"
 #include "ziploader.hpp"
 
-int main(void)
+int main(int argc, char **argv)
 {
+    (void)argc;
+    (void)argv;
+
     try {
         ZipFile zip;
 
@@ -32,7 +35,7 @@ int main(void)
             cout << data[n];
         }
         cout << endl << "Success !" << endl;
-    } catch (bad_alloc e) {
+    } catch (bad_alloc &e) {
         cerr << "Some 'new' allocation failed: " << e.what() << endl;
         return -2;
     }

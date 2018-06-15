@@ -51,7 +51,7 @@ bool ZipFile::Init(const string &path)
     bool ret;
     try {
         ret = InitScan(fp, path);
-    } catch (ifstream::failure e) {
+    } catch (ifstream::failure &e) {
         string err = "Init failure (";
         err += e.what();
         err += ")";
@@ -316,6 +316,7 @@ static int raw_inflate(vector<unsigned char> &data, ifstream &fp,
             switch (ret) {
             case Z_NEED_DICT:
                 ret = Z_DATA_ERROR;     /* and fall through */
+                __attribute__ ((fallthrough));
             case Z_DATA_ERROR:
             case Z_MEM_ERROR:
                 (void)inflateEnd(&strm);
