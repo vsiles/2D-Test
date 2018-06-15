@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <vector>
 
 using namespace std;
 
@@ -16,6 +17,14 @@ int main(void)
         if (zip.Init(resPath + "ziptest.zip")) {
             log("ZipFile parsed correctly");
         } else {
+            return -1;
+        }
+        vector<unsigned char> data;
+        size_t bytes = 0;;
+
+        string filename("resources/README.md");
+        if (!zip.Find(filename, data, &bytes)) {
+            logError("XXX", filename + " is missing !");
             return -1;
         }
     } catch (bad_alloc e) {

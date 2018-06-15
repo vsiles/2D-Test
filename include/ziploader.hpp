@@ -35,6 +35,7 @@ class ZipFileInfo
 class ZipFile
 {
     private:
+        std::string path;
         size_t num_files;
         std::vector<ZipFileInfo> files_info;
 
@@ -46,6 +47,8 @@ class ZipFile
         ZipFile();
 
         bool Init(const std::string &path);
+        bool Find(const std::string &name, std::vector<unsigned char> &data,
+                  size_t *bytes);
 };
 
 #endif /* ZIP_H_INCLUDED */
