@@ -2,6 +2,7 @@
 #include <string>
 #include <cassert>
 #include <cstdint>
+#include <vector>
 #include "errors.hpp"
 #include "ziploader.hpp"
 
@@ -56,6 +57,42 @@ bool ZipFile::Init(const string &path)
     return ret;
 }
 
+static uint16_t buf2u16(const vector<unsigned char>::iterator &it)
+{
+    unsigned char c0 = *it;
+    unsigned char c1 = *(it + 1);
+    uint16_t ret = c0;
+    ret |= ((uint16_t)c1) << 8;
+    return ret;
+}
+
+static uint32_t buf2u32(const vector<unsigned char>::iterator &it)
+{
+    unsigned char c0 = *it;
+    unsigned char c1 = *(it + 1);
+    unsigned char c2 = *(it + 2);
+    unsigned char c3 = *(it + 3);
+    uint32_t ret = c0;
+    ret |= ((uint32_t)c1) << 8;
+    ret |= ((uint32_t)c2) << 16;
+    ret |= ((uint32_t)c3) << 24;
+    return ret;
+}
+
+static uint16_t read_u16(vector<unsigned char>::iterator &it)
+{
+    uint16_t val = buf2u16(it);
+    it += sizeof(uint16_t);
+    return val;
+}
+
+static uint32_t read_u32(vector<unsigned char>::iterator &it)
+{
+    uint32_t val = buf2u32(it);
+    it += sizeof(uint32_t);
+    return val;
+}
+
 /**
  * @throws std::ifstream::failure
  */
@@ -79,14 +116,14 @@ bool ZipFile::InitScan(ifstream &fp, const string &path)
     int size = EOCD_SIZE + CMT_MAX;
     fp.seekg(-size, ios_base::end);
 
-    unsigned char *buffer = new unsigned char[size];
-    unsigned char *buffer_end = buffer + size;
-    fp.read((char *)buffer, size);
+    vector<unsigned char> buffer(size);
+    fp.read((char *)&(buffer[0]), size);
 
-    unsigned char *scan = buffer;
+    vector<unsigned char>::iterator scan = buffer.begin();
+    vector<unsigned char>::iterator last_possible = buffer.end() - 4;
     uint32_t word;
-    while ((scan + 4) < buffer_end) {
-        word = *(uint32_t *)scan;
+    while (scan != last_possible) {
+        word = buf2u32(scan);
         if (word == EOCD_MAGIC)
             break;
         scan++;
@@ -94,68 +131,57 @@ bool ZipFile::InitScan(ifstream &fp, const string &path)
 
     if (word != EOCD_MAGIC) {
         zipError(path, "Can't find EOCD");
-        delete [] buffer;
         return false;
     }
-
-    unsigned char *eocd = scan;
-
     scan += sizeof(uint32_t);
 
     /* Some heavy restrictions, at the moment
      * TODO: support more of ZIP format
      */
-    uint16_t nr_disk = *(uint16_t *)scan;
-    scan += sizeof(uint16_t);
+    uint16_t nr_disk = read_u16(scan);
     assert(nr_disk == 0);
-    uint16_t disk_start = *(uint16_t *)scan;
-    scan += sizeof(uint16_t);
+    uint16_t disk_start = read_u16(scan);
     assert(disk_start == 0);
-    uint16_t nr_rec_on_disk = *(uint16_t *)scan;
-    scan += sizeof(uint16_t);
-    num_files = *(uint16_t *)scan;
+    uint16_t nr_rec_on_disk = read_u16(scan);
+    num_files = read_u16(scan);
     log(string("Number of files in the zip: ") + to_string(num_files));
-    scan += sizeof(uint16_t);
-    assert(num_files = nr_rec_on_disk);
-    uint32_t cd_size = *(uint32_t *)scan;
-    scan += sizeof(uint32_t);
-    uint32_t cd_offset = *(uint32_t *)scan;
-    scan += sizeof(uint32_t);
-    uint64_t comment_size = *(uint16_t *)scan;
+    assert(num_files == nr_rec_on_disk);
+    uint32_t cd_size = read_u32(scan);
+    uint32_t cd_offset = read_u32(scan);
+    uint64_t comment_size = read_u16(scan);
+    scan += comment_size;
+    assert(scan == buffer.end());
 
-    delete [] buffer;
+    buffer.clear();
 
     /* Sanity check */
     assert(cd_offset + cd_size <= total_size);
-    assert(eocd + EOCD_SIZE + comment_size == buffer_end);
 
     files_info.resize(num_files);
     fp.seekg(cd_offset, ios_base::beg);
 
     size_t bytes = 0;
+    buffer.resize(CDFH_SIZE);
+
     for (size_t nr = 0; nr < num_files; nr++) {
+        log(string("Parsing file ") + to_string(nr));
         ZipFileInfo *info = &(files_info[nr]);
 
-        buffer = new unsigned char[CDFH_SIZE];
-        buffer_end = buffer + CDFH_SIZE;
 
         size_t start_pos = fp.tellg();
-        fp.read((char *)buffer, CDFH_SIZE);
+        fp.read((char *)&(buffer[0]), CDFH_SIZE);
 
-        scan = buffer;
-        word = *(uint32_t *)scan;
+        scan = buffer.begin();
+        word = read_u32(scan);
         if (word != CDFH_MAGIC) {
             zipError(path, string("Can't find CDFH - ") + to_string(nr));
-            delete [] buffer;
             return false;
         }
-        scan += sizeof(uint32_t);
 
         scan += sizeof(uint16_t); // skip "Version made by"
         scan += sizeof(uint16_t); // skip "Version needed to extract (minimum)
         scan += sizeof(uint16_t); // skip "General purpose bit flag"
-        uint16_t compression_method = *(uint16_t *)scan;
-        scan += sizeof(uint16_t);
+        uint16_t compression_method = read_u16(scan);
         if (compression_method != 0) {
             info->compressed = true;
             assert(compression_method == 8 /* deflate */);
@@ -165,27 +191,19 @@ bool ZipFile::InitScan(ifstream &fp, const string &path)
         scan += sizeof(uint16_t); // skip "File last modification time"
         scan += sizeof(uint16_t); // skip "File last modification date"
         scan += sizeof(uint32_t); // skip "CRC32"
-        info->compressed_size = *(uint32_t *)scan;
-        scan += sizeof(uint32_t);
-        info->size = *(uint32_t *)scan;
-        scan += sizeof(uint32_t);
-        uint16_t file_name_length = *(uint16_t *)scan;
+        info->compressed_size = read_u32(scan);
+        info->size = read_u32(scan);
+        uint16_t file_name_length = read_u16(scan);
         assert(file_name_length != 0);
-        scan += sizeof(uint16_t);
-        uint16_t extra_field_length = *(uint16_t *)scan;
-        scan += sizeof(uint16_t);
-        uint16_t comment_length = *(uint16_t *)scan;
-        scan += sizeof(uint16_t);
-        disk_start = *(uint16_t *)scan;
-        scan += sizeof(uint16_t);
+        uint16_t extra_field_length = read_u16(scan);
+        uint16_t comment_length = read_u16(scan);
+        disk_start = read_u16(scan);
         assert(disk_start == 0);
         scan += sizeof(uint16_t); // skip "internal file attributes"
         scan += sizeof(uint32_t); // skip "external file attributes"
-        info->offset = *(uint32_t *)scan;
-        scan += sizeof(uint32_t);
-        assert(scan == buffer_end);
+        info->offset = read_u32(scan);
+        assert(scan == buffer.end());
 
-        delete [] buffer;
         info->name.resize(file_name_length);
         fp.read((char *)&(info->name[0]), file_name_length);
         fp.seekg(extra_field_length + comment_length, ios_base::cur);
@@ -198,6 +216,5 @@ bool ZipFile::InitScan(ifstream &fp, const string &path)
     }
 
     assert(bytes == cd_size);
-
     return true;
 }
