@@ -269,26 +269,15 @@ bool ZipFile::InitScan(ifstream &fp, const string &path)
     return true;
 }
 
-#if 0
-#if defined(MSDOS) || defined(OS2) || defined(WIN32) || defined(__CYGWIN__)
-#  include <fcntl.h>
-#  include <io.h>
-#  define SET_BINARY_MODE(file) setmode(fileno(file), O_BINARY)
-#else
-#  define SET_BINARY_MODE(file)
-#endif
-#endif
-
 #define INFLATE_CHUNK ((size_t)(16 * 1024))
 
-static int raw_inflate(unsigned char *dest, ifstream &fp,
+static int raw_inflate(vector<unsigned char> &data, ifstream &fp,
                        size_t compressed_size)
 {
     int ret;
     size_t have;
     z_stream strm;
-    static unsigned char in[INFLATE_CHUNK];
-    static unsigned char out[INFLATE_CHUNK];
+    static vector<unsigned char>in(INFLATE_CHUNK);
 
     /* allocate inflate state */
     strm.zalloc = Z_NULL;
@@ -303,10 +292,11 @@ static int raw_inflate(unsigned char *dest, ifstream &fp,
 
     /* decompress until deflate stream ends or end of file */
     size_t bytes_left = compressed_size;
+    vector<unsigned char>::iterator cur = data.begin();
     do {
         size_t sz = (bytes_left < INFLATE_CHUNK)?bytes_left:INFLATE_CHUNK;
-        memset(in, 0, INFLATE_CHUNK);
-        fp.read((char *)in, sz);
+        fill(in.begin(), in.end(), 0);
+        fp.read(reinterpret_cast<char *>(&(in[0])), sz);
         if (!fp.good()) {
             (void)inflateEnd(&strm);
             return Z_ERRNO;
@@ -314,12 +304,12 @@ static int raw_inflate(unsigned char *dest, ifstream &fp,
         strm.avail_in = sz;
         if (strm.avail_in == 0)
             break;
-        strm.next_in = in;
+        strm.next_in = static_cast<unsigned char *>(&(in[0]));;
 
         /* run inflate() on input until output buffer not full */
         do {
             strm.avail_out = INFLATE_CHUNK;
-            strm.next_out = out;
+            strm.next_out = static_cast<unsigned char *>(&(*cur));
 
             ret = inflate(&strm, Z_NO_FLUSH);
             assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
@@ -333,12 +323,13 @@ static int raw_inflate(unsigned char *dest, ifstream &fp,
             }
 
             have = INFLATE_CHUNK - strm.avail_out;
-            memcpy(dest, out, have);
-            dest += have;
+            cur += have;
         } while (strm.avail_out == 0);
+        bytes_left -= sz;
 
         /* done when inflate() says it's done */
     } while (ret != Z_STREAM_END);
+    assert(bytes_left == 0);
 
     /* clean up and return */
     (void)inflateEnd(&strm);
@@ -363,8 +354,8 @@ bool ZipFile::Find(const string &name, vector<unsigned char> &data,
     if (it == files_info.end())
         return false;
 
-    size_t compressed_size = (*it).compressed_size;
-    size_t uncompressed_size = (*it).size;
+    size_t csize = (*it).compressed_size;
+    size_t size = (*it).size;
 
     ifstream fp;
     fp.open(path.c_str(), ios_base::in | ios_base::binary);
@@ -374,7 +365,7 @@ bool ZipFile::Find(const string &name, vector<unsigned char> &data,
         return false;
     }
 
-    data.resize(uncompressed_size);
+    data.resize(size);
 
     int ret;
     fp.seekg((*it).offset, ios_base::beg);
@@ -384,9 +375,9 @@ bool ZipFile::Find(const string &name, vector<unsigned char> &data,
         return false;
     }
 
-    unsigned char *buffer = new unsigned char[uncompressed_size];
-    ret = raw_inflate(buffer, fp, compressed_size);
+    ret = raw_inflate(data, fp, csize);
     fp.close();
+
     switch (ret) {
         case Z_OK:
             cout << "Decompressing successful" << endl;
@@ -409,13 +400,11 @@ bool ZipFile::Find(const string &name, vector<unsigned char> &data,
             ret = 1;
             break;
     }
-    delete [] buffer;
-
     if (ret != 0) {
         zipError((*it).name, "Uncompress failed");
         return false;
     }
 
-    *bytes = uncompressed_size;
+    *bytes = size;
     return true;
 }
