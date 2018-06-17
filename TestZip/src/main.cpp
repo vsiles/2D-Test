@@ -34,6 +34,9 @@ int main(int argc, char **argv)
         for (size_t n = 0; n < bytes; n++) {
             cout << data[n];
         }
+
+        cout << "Listing all files:" << endl;
+        zip.List();
         cout << endl << "Success !" << endl;
     } catch (bad_alloc &e) {
         cerr << "Some 'new' allocation failed: " << e.what() << endl;

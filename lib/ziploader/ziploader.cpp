@@ -409,3 +409,10 @@ bool ZipFile::Find(const string &name, vector<unsigned char> &data,
     *bytes = size;
     return true;
 }
+
+void ZipFile::List()
+{
+    for (ZipFileInfo &info : files_info) {
+        cout << info.name << endl;
+    }
+}

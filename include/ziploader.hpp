@@ -49,6 +49,7 @@ class ZipFile
         bool Init(const std::string &path);
         bool Find(const std::string &name, std::vector<unsigned char> &data,
                   size_t *bytes);
+        void List();
 };
 
 #endif /* ZIP_H_INCLUDED */
