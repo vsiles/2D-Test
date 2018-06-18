@@ -5,7 +5,9 @@
 #include <cstring> // temp, memcpy
 #include <vector>
 #include <zlib.h>
+
 #include "errors.hpp"
+#include "macros.hpp"
 #include "ziploader.hpp"
 
 using namespace std;
@@ -316,7 +318,7 @@ static int raw_inflate(vector<unsigned char> &data, ifstream &fp,
             switch (ret) {
             case Z_NEED_DICT:
                 ret = Z_DATA_ERROR;     /* and fall through */
-                __attribute__ ((fallthrough));
+                SUPPRESS_FALLTHROUGH;
             case Z_DATA_ERROR:
             case Z_MEM_ERROR:
                 (void)inflateEnd(&strm);
