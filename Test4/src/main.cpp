@@ -2,6 +2,7 @@
 #include <string>
 #include <SDL.h>
 #include <SDL_ttf.h>
+#include <cstdlib>
 
 #include "errors.hpp"
 #include "resource.hpp"
@@ -16,10 +17,46 @@ struct gstate_t {
 #define SCREEN_WIDTH    1024
 #define SCREEN_HEIGHT   768
 
+static int signature(const int *a, int n)
+{
+    int ret = 1;
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            if (a[j] < a[i])
+                ret = -ret;
+        }
+    }
+    return ret;
+}
+
+static int signature_hole(const int *a, int n)
+{
+    int pos = 0;
+    while (pos < n) {
+        if (a[pos] == (n-1))
+            break;
+        pos++;
+    }
+    return ((pos % 2) == 0)?1:-1;
+}
+
+static void generate_perm(int *a, int n)
+{
+    for (int i = n - 1; i > 0; i--) {
+        float f = (float)rand();
+        f = f * (float)n / RAND_MAX;
+        int j = (int)f;
+        int temp = a[i];
+        a[i] = a[j];
+        a[j] = temp;
+    }
+}
+
 static int createWindow(gstate_t *gstate, const char* name,
                         Uint32 renderer_flags,
                         size_t posx = 100, size_t posy =  100,
-                        size_t width = SCREEN_WIDTH, size_t height = SCREEN_HEIGHT,
+                        size_t width = SCREEN_WIDTH,
+                        size_t height = SCREEN_HEIGHT,
                         Uint32 window_flags = SDL_WINDOW_SHOWN)
 {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -48,6 +85,7 @@ static int createWindow(gstate_t *gstate, const char* name,
     return 0;
 }
 
+#if 0
 enum texture_kind {
     TEXTURE_BMP = 0,
 };
@@ -85,15 +123,17 @@ static SDL_Texture *createTexture(gstate_t *gstate, const char *path,
 
     return tex;
 }
+#endif
 
-static void renderTexture(gstate_t *gstate, SDL_Texture *tex, int x, int y)
+static void renderTexture(gstate_t *gstate, SDL_Texture *tex, int x, int y,
+                          int w, int h)
 {
     SDL_Rect dst;
     dst.x = x;
     dst.y = y;
+    dst.w = w;
+    dst.h = h;
 
-    /* TODO Optimize this */
-    SDL_QueryTexture(tex, NULL, NULL, &dst.w, &dst.h);
     SDL_RenderCopy(gstate->ren, tex, NULL, &dst);
 }
 
@@ -158,32 +198,49 @@ static int run(gstate_t *gstate)
 
     const string resPath = getResourcePath("fonts");
     SDL_Color color = { 255, 255, 255, 255 };
-    SDL_Texture *image[3];
+    SDL_Texture *image[16];
+    SDL_Rect boxes[16];
+    static int perm[16] = { 0 };
+    int timeout = 100;
 
-    image[0] = renderText(gstate, "TTF fonts are cool !",
-                          resPath + "legos.ttf", color, 50,
-                          TS_SOLID);
-    image[1] = renderText(gstate, "TTF fonts are cool !",
-                          resPath + "legos.ttf", color, 50,
-                          TS_SHADED);
-    image[2] = renderText(gstate, "TTF fonts are cool !",
-                          resPath + "legos.ttf", color, 50,
-                          TS_BLENDED);
+    while (timeout > 0) {
+        for (int i = 0; i < 16; i++)
+            perm[i] = i;
 
-    if (image[0] == nullptr) {
-        return -1;
-    }
-    if (image[1] == nullptr) {
-        return -1;
-    }
-    if (image[2] == nullptr) {
-        return -1;
+        generate_perm(perm, 16);
+        int sig1 = signature(perm, 16);
+        int sig2 = signature_hole(perm, 16);
+        if (sig1 == sig2)
+            break;
+        timeout--;
     }
 
-    int width, height;
-    SDL_QueryTexture(image[0], NULL, NULL, &width, &height);
-    int x = (SCREEN_WIDTH - width) / 2;
-    int y = (SCREEN_HEIGHT - height) / 2;
+    if (timeout == 0) {
+        cout << "Can't generate a permutation" << endl;
+        return -1;
+    }
+
+    cout << "Generated in " << 100 - timeout + 1 << " attempts." << endl;
+
+    for (int y = 0; y < 4; y++) {
+        for (int x = 0; x < 4; x++) {
+            int nr = perm[x + 4 * y];
+            string text = to_string(nr);
+            if (nr == 15)
+                text = string(" ");
+            image[nr] = renderText(gstate, text, resPath + "Calibri.ttf",
+                                   color, 100, TS_SOLID);
+            if (image[nr] == nullptr) {
+                for (int xxx = 0; xxx < nr; xxx++)
+                    SDL_DestroyTexture(image[xxx]);
+                return -1;
+            }
+            boxes[nr].x = 50 + 200 * x;
+            boxes[nr].y = 50 + 200 * y;
+            boxes[nr].w = 100;
+            boxes[nr].h = 100;
+        }
+    }
 
     while (true) {
         /* Event management */
@@ -192,9 +249,13 @@ static int run(gstate_t *gstate)
         while (SDL_PollEvent(&event) != 0) {
             switch (event.type) {
                 case SDL_QUIT:
-                case SDL_KEYDOWN:
-                case SDL_MOUSEBUTTONDOWN:
                     done = true;
+                    break;
+                case SDL_KEYDOWN:
+                    switch (event.key.keysym.sym) {
+                        case SDLK_ESCAPE:
+                            done = true;
+                    }
                     break;
             }
             if (done)
@@ -204,9 +265,20 @@ static int run(gstate_t *gstate)
             break;
 
         SDL_RenderClear(gstate->ren);
-        renderTexture(gstate, image[0], x, y - 120);
-        renderTexture(gstate, image[1], x, y - 60);
-        renderTexture(gstate, image[2], x, y);
+        for (int i = 0; i < 16; i++) {
+            int nr = perm[i];
+            Uint8 r, g, b, a;
+            SDL_GetRenderDrawColor(gstate->ren, &r, &g, &b, &a);
+            if (nr == 15) {
+                SDL_SetRenderDrawColor(gstate->ren, 255, 0, 0, 255);
+                SDL_RenderFillRect(gstate->ren, &(boxes[nr]));
+            }
+            renderTexture(gstate, image[nr], boxes[nr].x, boxes[nr].y,
+                          100, 100);
+            SDL_SetRenderDrawColor(gstate->ren, 0, 255, 0, 255);
+            SDL_RenderDrawRect(gstate->ren, &(boxes[nr]));
+            SDL_SetRenderDrawColor(gstate->ren, r, g, b, a);
+        }
         SDL_RenderPresent(gstate->ren);
     }
 
