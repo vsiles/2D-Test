@@ -2,7 +2,8 @@
 #include <string>
 #include <SDL.h>
 #include <SDL_ttf.h>
-#include <cstdlib>
+#include <cassert>
+#include <random>
 
 #include "errors.hpp"
 #include "resource.hpp"
@@ -14,8 +15,8 @@ struct gstate_t {
     SDL_Renderer *ren;
 };
 
-#define SCREEN_WIDTH    1024
-#define SCREEN_HEIGHT   768
+#define SCREEN_WIDTH    800
+#define SCREEN_HEIGHT   800
 
 static int signature(const int *a, int n)
 {
@@ -40,16 +41,37 @@ static int signature_hole(const int *a, int n)
     return ((pos % 2) == 0)?1:-1;
 }
 
-static void generate_perm(int *a, int n)
+__attribute__((unused))
+static void print_table(const int *a)
 {
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            cout << a[4 * i + j] << " ";
+        }
+        cout << endl;
+    }
+}
+
+// returns the position of the hole
+static int generate_perm(int *a, int n, int hole_pos)
+{
+
+    std::mt19937 rng;
+    rng.seed(std::random_device()());
+    std::uniform_int_distribution<std::mt19937::result_type> udist(0, n - 1);
+
     for (int i = n - 1; i > 0; i--) {
-        float f = (float)rand();
-        f = f * (float)n / RAND_MAX;
-        int j = (int)f;
+        int j = udist(rng);
         int temp = a[i];
         a[i] = a[j];
         a[j] = temp;
+
+        if (hole_pos == i)
+            hole_pos = j;
+        else if (hole_pos == j)
+            hole_pos = i;
     }
+    return hole_pos;
 }
 
 static int createWindow(gstate_t *gstate, const char* name,
@@ -185,6 +207,29 @@ SDL_Texture* renderText(gstate_t *gstate, const string &message,
     return texture;
 }
 
+/* 4 neighbourhood */
+static int adj[16][4] = {
+    { 1, 4, -1, -1 },
+    { 0, 5, 2, -1 },
+    { 1, 6, 3, -1 },
+    { 2, 7, -1, -1 },
+
+    { 0, 5, 8, -1 },
+    { 1, 4, 6, 9 },
+    { 2, 5, 7, 10 },
+    { 3, 6, 11, -1 },
+
+    { 4, 9, 12, -1 },
+    { 5, 8, 10, 13 },
+    { 6, 9, 11, 14 },
+    { 7, 10, 15, -1 },
+
+    { 8, 13, -1, -1 },
+    { 9, 12, 14, -1 },
+    { 10, 13, 15, -1 },
+    { 11, 14, -1, -1 }
+};
+
 static int run(gstate_t *gstate)
 {
     int ret;
@@ -199,15 +244,17 @@ static int run(gstate_t *gstate)
     const string resPath = getResourcePath("fonts");
     SDL_Color color = { 255, 255, 255, 255 };
     SDL_Texture *image[16];
-    SDL_Rect boxes[16];
     static int perm[16] = { 0 };
     int timeout = 100;
 
-    while (timeout > 0) {
-        for (int i = 0; i < 16; i++)
-            perm[i] = i;
 
-        generate_perm(perm, 16);
+    for (int i = 0; i < 16; i++)
+        perm[i] = i;
+
+    int hole_pos = 15;
+
+    while (timeout > 0) {
+        hole_pos = generate_perm(perm, 16, hole_pos);
         int sig1 = signature(perm, 16);
         int sig2 = signature_hole(perm, 16);
         if (sig1 == sig2)
@@ -221,6 +268,8 @@ static int run(gstate_t *gstate)
     }
 
     cout << "Generated in " << 100 - timeout + 1 << " attempts." << endl;
+    /* cout << "Hole in position " << hole_pos << endl; */
+    /* print_table(perm); */
 
     for (int y = 0; y < 4; y++) {
         for (int x = 0; x < 4; x++) {
@@ -235,17 +284,15 @@ static int run(gstate_t *gstate)
                     SDL_DestroyTexture(image[xxx]);
                 return -1;
             }
-            boxes[nr].x = 50 + 200 * x;
-            boxes[nr].y = 50 + 200 * y;
-            boxes[nr].w = 100;
-            boxes[nr].h = 100;
         }
     }
 
     while (true) {
         /* Event management */
+        int x, y;
         SDL_Event event;
         bool done = false;
+        bool clicked = false;
         while (SDL_PollEvent(&event) != 0) {
             switch (event.type) {
                 case SDL_QUIT:
@@ -257,6 +304,17 @@ static int run(gstate_t *gstate)
                             done = true;
                     }
                     break;
+                case SDL_MOUSEBUTTONDOWN:
+                    x = event.button.x - 50;
+                    y = event.button.y - 50;
+                    x /= 100;
+                    y /= 100;
+                    if ((x % 2) == 0 && (y % 2) == 0) {
+                        x /= 2;
+                        y /= 2;
+                        clicked = true;
+                    }
+                    break;
             }
             if (done)
                 break;
@@ -264,27 +322,65 @@ static int run(gstate_t *gstate)
         if (done)
             break;
 
-        SDL_RenderClear(gstate->ren);
-        for (int i = 0; i < 16; i++) {
-            int nr = perm[i];
-            Uint8 r, g, b, a;
-            SDL_GetRenderDrawColor(gstate->ren, &r, &g, &b, &a);
-            if (nr == 15) {
-                SDL_SetRenderDrawColor(gstate->ren, 255, 0, 0, 255);
-                SDL_RenderFillRect(gstate->ren, &(boxes[nr]));
+        bool solved = false;
+        if (clicked) {
+            int pos = x + 4 * y;
+            int *neighb = adj[pos];
+            for (int i = 0; i < 4; i++) {
+                if (neighb[i] < 0)
+                    break;
+                if (neighb[i] == hole_pos) {
+                    perm[hole_pos] = perm[pos];
+                    perm[pos] = 15;
+                    hole_pos = pos;
+
+                    solved = true;
+                    /* Check for success */
+                    for (int z = 0; z < 16; z++) {
+                        if (perm[z] != z) {
+                            solved = false;
+                            break;
+                        }
+                    }
+                    break;
+                }
             }
-            renderTexture(gstate, image[nr], boxes[nr].x, boxes[nr].y,
-                          100, 100);
-            SDL_SetRenderDrawColor(gstate->ren, 0, 255, 0, 255);
-            SDL_RenderDrawRect(gstate->ren, &(boxes[nr]));
-            SDL_SetRenderDrawColor(gstate->ren, r, g, b, a);
+        }
+        SDL_RenderClear(gstate->ren);
+        for (int j = 0; j < 4; j++) {
+            for (int i = 0; i < 4; i++) {
+                int ij = i + 4 * j;
+                SDL_Rect box = {
+                    .x = 50 + 200 * i,
+                    .y = 50 + 200 * j,
+                    .w = 100,
+                    .h = 100
+                };
+                int nr = perm[ij];
+                Uint8 r, g, b, a;
+                SDL_GetRenderDrawColor(gstate->ren, &r, &g, &b, &a);
+                if (ij == hole_pos) {
+                    assert(perm[ij] == 15);
+                    SDL_SetRenderDrawColor(gstate->ren, 255, 0, 0, 255);
+                    SDL_RenderFillRect(gstate->ren, &box);
+                }
+                renderTexture(gstate, image[nr], box.x, box.y,
+                              100, 100);
+                SDL_SetRenderDrawColor(gstate->ren, 0, 255, 0, 255);
+                SDL_RenderDrawRect(gstate->ren, &box);
+                SDL_SetRenderDrawColor(gstate->ren, r, g, b, a);
+            }
         }
         SDL_RenderPresent(gstate->ren);
+        if (solved) {
+            cout << "Solved !" << endl;
+            SDL_Delay(2000);
+            break;
+        }
     }
 
-    SDL_DestroyTexture(image[0]);
-    SDL_DestroyTexture(image[1]);
-    SDL_DestroyTexture(image[2]);
+    for (int z = 0; z < 16; z++)
+        SDL_DestroyTexture(image[z]);
 
     return 0;
 }
