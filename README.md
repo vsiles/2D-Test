@@ -1,7 +1,5 @@
-# Plat2D
-Casual 2D engine for platformer 'Megaman'-like
-
-** early stages **
+# 2D-Test
+Random 2D programming tests, mostly based on SDL2.
 
 Not much at the moment, only a very small [Tiled](https://www.mapeditor.org)
 parser, to toy with the format (see Test0)
@@ -9,6 +7,7 @@ parser, to toy with the format (see Test0)
 Depends on:
 - [SDL 2.0](https://www.libsdl.org/)
 - [SDL\_image 2.0](https://www.libsdl.org/projects/SDL_image/)
+- [SDL\_ttf 2.0](https://www.libsdl.org/projects/SDL_ttf/)
 - [zlib](https://www.zlib.net/)
 - [nlohmann](https://github.com/nlohmann/json) JSON parser.
 - C++
@@ -17,7 +16,7 @@ Depends on:
 
 # Building information
 ```shell
-$ cd /path/to/Plat2D
+$ cd /path/to/2D-Test
 $ mkdir build
 # for Windows ...
 $ cmake .. -G "MinGW Makefiles"

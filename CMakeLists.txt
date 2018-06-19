@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.5)
-project(Plat2D)
+project(2D-Test)
 
 # Use our modified FindSDL2* modules
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${Plat2D_SOURCE_DIR}/cmake")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${2D-Test_SOURCE_DIR}/cmake")
 # Set an output directory for our binaries
-set(BIN_DIR ${Plat2D_SOURCE_DIR}/bin)
+set(BIN_DIR ${2D-Test_SOURCE_DIR}/bin)
 
 # Use c++11
 set (CMAKE_CXX_STANDARD 11)
@@ -41,7 +41,7 @@ find_package(ZLIB REQUIRED)
 # ZLIB includes are in the default compiler path
 
 # Local includes
-include_directories(${Plat2D_SOURCE_DIR}/include)
+include_directories(${2D-Test_SOURCE_DIR}/include)
 add_subdirectory (lib) 
  
 # First test program

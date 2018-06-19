@@ -2,8 +2,10 @@
 *.d
 
 # Build artefact
-build
-bin
+build/
+debug/
+release/
+bin/
 
 # vim temp files
 *.swp
